@@ -22,57 +22,61 @@
 
     <div id="admin-panel">
         <div class="flex justify-between items-center mb-8 border-b pb-4">
-            <h2 class="text-2xl font-bold text-blue-800 italic text-right w-full">ניהול בנקאי</h2>
+            <h2 class="text-2xl font-bold text-blue-800 italic text-right w-full">ניהול חשבון</h2>
             <button onclick="closeAdmin()" class="bg-gray-100 px-4 py-2 rounded-xl font-bold">X</button>
         </div>
         
-        <div class="space-y-6">
+        <div class="space-y-6 text-right">
             <div>
-                <label class="block font-bold text-gray-600 mb-2 italic text-right">סוג פעולה / עדכון:</label>
-                <select id="admin-target" class="w-full p-4 border-2 border-gray-100 rounded-2xl bg-gray-50 font-bold outline-none focus:border-blue-500 text-right">
-                    <option value="cash">💰 עו"ש (מזומן)</option>
-                    <option value="savings">🏦 פיקדון (חיסכון)</option>
-                    <option value="invest">📈 השקעה (מדד)</option>
-                    <option value="config_interest">⚙️ עדכון % ריבית פיקדון</option>
+                <label class="block font-bold text-gray-600 mb-2 italic">בחר סוג פעולה:</label>
+                <select id="admin-target" class="w-full p-4 border-2 border-gray-200 rounded-2xl bg-white font-bold outline-none focus:border-blue-500 text-right">
+                    <optgroup label="תנועות כספיות">
+                        <option value="cash">💵 עו"ש (מזומן)</option>
+                        <option value="savings">🏦 פיקדון (חיסכון)</option>
+                        <option value="invest">📈 השקעה (מדד)</option>
+                    </optgroup>
+                    <optgroup label="הגדרות מערכת">
+                        <option value="config_interest">⚙️ עדכון % ריבית פיקדון</option>
+                    </optgroup>
                 </select>
             </div>
 
             <div>
-                <label class="block font-bold text-gray-600 mb-2 italic text-right">סכום או אחוז:</label>
+                <label id="amount-label" class="block font-bold text-gray-600 mb-2 italic">סכום הפעולה:</label>
                 <input type="text" id="admin-amount" inputmode="decimal" 
                     class="w-full p-5 border-2 border-blue-100 rounded-2xl text-3xl font-black outline-none focus:border-blue-500 bg-blue-50" 
                     placeholder="0.00">
             </div>
             
             <div id="transaction-buttons" class="grid grid-cols-2 gap-4 pt-2">
-                <button onclick="executeAction('plus')" class="bg-green-600 text-white p-6 rounded-2xl font-bold shadow-lg text-xl active:scale-95 italic">➕ הפקדה / קבע</button>
+                <button id="main-action-btn" onclick="executeAction('plus')" class="bg-green-600 text-white p-6 rounded-2xl font-bold shadow-lg text-xl active:scale-95 italic">➕ בצע</button>
                 <button id="withdraw-btn" onclick="executeAction('minus')" class="bg-red-600 text-white p-6 rounded-2xl font-bold shadow-lg text-xl active:scale-95 italic">➖ משיכה</button>
             </div>
 
             <div class="pt-20 text-center">
-                <button onclick="resetAccount()" class="text-gray-300 text-xs italic underline">איפוס נתונים כללי</button>
+                <button onclick="resetAccount()" class="text-gray-300 text-xs italic underline">איפוס נתונים כללי (בדיקות)</button>
             </div>
         </div>
     </div>
 
     <header class="bg-blue-600 text-white pt-12 pb-10 px-8 rounded-b-[3rem] shadow-xl mb-8 text-center">
         <h1 class="text-3xl font-extrabold italic tracking-tight">הבנק של שגיא</h1>
-        <div id="status-msg" class="text-blue-200 text-[10px] mt-2 italic opacity-70 italic">מערכת ניהול חכמה</div>
+        <div id="status-msg" class="text-blue-200 text-[10px] mt-2 italic opacity-70">ניהול תנועות וריבית</div>
     </header>
 
     <main class="px-6 space-y-6 max-w-md mx-auto">
         <div class="bg-white p-6 rounded-3xl shadow-md border-r-8 border-orange-400 flex justify-between items-center">
             <div class="text-2xl">💵</div>
             <div class="text-left">
-                <h3 class="text-gray-400 text-[10px] font-bold mb-1 italic text-right uppercase">מזומן (עו"ש)</h3>
+                <h3 class="text-gray-400 text-[10px] font-bold mb-1 italic text-right">מזומן (עו"ש)</h3>
                 <p id="cash-display" class="text-4xl font-black text-gray-800 amount-text">₪0</p>
             </div>
         </div>
 
         <div class="bg-white p-6 rounded-3xl shadow-md border-r-8 border-green-500">
             <div class="flex justify-between items-start mb-1 text-right italic">
-                <span id="interest-tag" class="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold">1.5% ריבית</span>
-                <h3 class="text-gray-400 text-[10px] font-bold uppercase">חיסכון נצבר</h3>
+                <span id="interest-tag" class="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold italic">1.5% ריבית</span>
+                <h3 class="text-gray-400 text-[10px] font-bold">חיסכון נצבר</h3>
             </div>
             <p id="savings-display" class="text-4xl font-black text-gray-800 amount-text">₪0</p>
         </div>
@@ -80,11 +84,11 @@
         <div class="bg-white p-6 rounded-3xl shadow-md border-r-8 border-indigo-600">
             <div class="flex justify-between items-center mb-2 text-right italic">
                  <div id="stock-trend" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100">--%</div>
-                 <h3 class="text-gray-400 text-[10px] font-bold uppercase">S&P 500</h3>
+                 <h3 class="text-gray-400 text-[10px] font-bold">S&P 500</h3>
             </div>
             <p id="invest-display" class="text-4xl font-black text-gray-800 amount-text mb-4">₪0</p>
-            <div class="flex justify-between text-[10px] text-gray-400 border-t pt-3 border-dashed italic">
-                <span id="market-status">מעדכן בורסה...</span>
+            <div class="flex justify-between text-[10px] text-gray-400 border-t pt-3 border-dashed italic italic">
+                <span id="market-status">מעדכן...</span>
                 <span>קרן: ₪<span id="invest-base">0</span></span>
             </div>
         </div>
@@ -105,14 +109,14 @@
         const db = firebase.database().ref('users/שגיא');
         
         let marketPrice = 0;
-        let currentInterest = 0.015; // ברירת מחדל
+        let currentInterest = 0.015;
 
         async function fetchMarket() {
             try {
                 const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC')}`);
                 const j = await res.json();
                 marketPrice = JSON.parse(j.contents).chart.result[0].meta.regularMarketPrice;
-                document.getElementById('market-status').innerText = "שער מדד: " + Math.round(marketPrice);
+                document.getElementById('market-status').innerText = "מדד: " + Math.round(marketPrice);
                 return marketPrice;
             } catch(e) { return 0; }
         }
@@ -121,18 +125,14 @@
             const data = s.val() || {};
             if (!marketPrice) await fetchMarket();
             
-            // עדכון הריבית מה-Firebase
             currentInterest = data.config_interest !== undefined ? (data.config_interest / 100) : 0.015;
             document.getElementById('interest-tag').innerText = (currentInterest * 100).toFixed(1) + '% ריבית';
 
-            // עו"ש
             let cashTotal = 0;
             if (data.cash_log) Object.values(data.cash_log).forEach(t => cashTotal += t.amount);
-            const cashEl = document.getElementById('cash-display');
-            cashEl.innerText = '₪' + cashTotal.toLocaleString();
-            if (cashTotal < 0) cashEl.classList.add('negative'); else cashEl.classList.remove('negative');
+            document.getElementById('cash-display').innerText = '₪' + cashTotal.toLocaleString();
+            document.getElementById('cash-display').className = cashTotal < 0 ? "text-4xl font-black amount-text negative" : "text-4xl font-black amount-text text-gray-800";
 
-            // חיסכון
             let savingsTotal = 0;
             const now = new Date().getTime();
             if (data.savings_log) {
@@ -144,7 +144,6 @@
             }
             document.getElementById('savings-display').innerText = '₪' + Math.round(savingsTotal).toLocaleString();
 
-            // השקעות
             let totalUnits = 0, totalInvested = 0;
             if (data.invest_log) {
                 Object.values(data.invest_log).forEach(t => {
@@ -158,7 +157,7 @@
             const diff = totalInvested > 0 ? (((currentVal - totalInvested) / totalInvested) * 100).toFixed(2) : 0;
             const trend = document.getElementById('stock-trend');
             trend.innerText = (diff >= 0 ? '+' : '') + diff + '%';
-            trend.className = diff >= 0 ? "text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 italic" : "text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 italic";
+            trend.className = diff >= 0 ? "text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700" : "text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700";
         });
 
         function openAdmin() { if(prompt("סיסמה:") === "1234") document.getElementById('admin-panel').style.display='block'; }
@@ -172,7 +171,6 @@
             const now = new Date().getTime();
 
             if (target === 'config_interest') {
-                // עדכון אחוז ריבית
                 db.child('config_interest').set(val);
                 alert("הריבית עודכנה ל-" + val + "%");
             } else if (target === 'invest') {
@@ -189,15 +187,17 @@
             closeAdmin();
         }
 
+        // שינוי טקסטים דינמי
+        document.getElementById('admin-target').addEventListener('change', function() {
+            const isInterest = this.value === 'config_interest';
+            document.getElementById('withdraw-btn').style.display = isInterest ? 'none' : 'block';
+            document.getElementById('main-action-btn').innerText = isInterest ? 'עדכן ריבית' : '➕ הפקדה';
+            document.getElementById('amount-label').innerText = isInterest ? 'אחוז ריבית חדש (למשל 2):' : 'סכום הפעולה:';
+        });
+
         function resetAccount() {
             if (confirm("לאפס הכל?")) db.set({ initialized: true }).then(() => location.reload());
         }
-
-        // הסתרת כפתור משיכה כשבוחרים עדכון ריבית
-        document.getElementById('admin-target').addEventListener('change', function() {
-            const withdrawBtn = document.getElementById('withdraw-btn');
-            withdrawBtn.style.visibility = this.value === 'config_interest' ? 'hidden' : 'visible';
-        });
     </script>
 </body>
 </html>
