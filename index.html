@@ -11,17 +11,42 @@
     <style>
         body { font-family: 'Assistant', sans-serif; background-color: #f1f5f9; }
         .amount-text { font-style: italic; letter-spacing: -0.05em; text-align: left; direction: ltr; }
+        #admin-panel { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.98); z-index: 50; padding: 2rem; }
     </style>
 </head>
 <body class="min-h-screen pb-10">
 
-    <header class="bg-gradient-to-b from-blue-600 to-blue-700 text-white p-8 rounded-b-[3rem] shadow-xl mb-8 text-center">
+    <div id="admin-panel" class="overflow-y-auto">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-blue-800">ניהול חשבון</h2>
+            <button onclick="closeAdmin()" class="bg-gray-200 p-2 rounded-full text-sm">❌ סגור</button>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-bold text-gray-700">בחר סוג חשבון:</label>
+                <select id="admin-target" class="w-full p-3 border rounded-xl bg-white shadow-sm">
+                    <option value="Cash">עו"ש (מזומן)</option>
+                    <option value="Savings">פיקדון בריבית</option>
+                    <option value="Interest_ratr">אחוז ריבית חודשית</option>
+                    <option value="Investments">השקעה במדד (קרן)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-gray-700">סכום / ערך חדש:</label>
+                <input type="number" id="admin-amount" class="w-full p-3 border rounded-xl shadow-sm" placeholder="הכנס מספר...">
+            </div>
+            <button onclick="updateData('add')" class="w-full bg-green-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg">➕ הפקד / הוסף</button>
+            <button onclick="updateData('set')" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg">📝 קבע ערך חדש</button>
+        </div>
+        <p class="text-[10px] text-gray-400 mt-10 text-center italic">"הוסף" מוסיף לקיים | "קבע" מחליף את הקיים</p>
+    </div>
+
+    <header class="bg-gradient-to-b from-blue-600 to-blue-700 text-white p-8 rounded-b-[3rem] shadow-xl mb-8 text-center" onmousedown="startTimer()" onmouseup="clearTimer()" ontouchstart="startTimer()" ontouchend="clearTimer()">
         <h1 class="text-3xl font-extrabold tracking-tight">הבנק של שגיא</h1>
-        <div id="status-msg" class="text-blue-100 text-[10px] mt-2 opacity-80 italic">מתחבר למערכת...</div>
+        <div id="status-msg" class="text-blue-100 text-[10px] mt-2 opacity-80 italic italic">מחובר למערכת...</div>
     </header>
 
     <main class="px-6 space-y-6 max-w-md mx-auto">
-        
         <div class="bg-white p-6 rounded-3xl shadow-md border-r-8 border-orange-400 flex justify-between items-center">
             <div class="bg-orange-50 p-3 rounded-2xl text-2xl">💵</div>
             <div class="text-left">
@@ -42,17 +67,15 @@
 
         <div id="invest-card" class="bg-white p-6 rounded-3xl shadow-md border-r-8 border-indigo-600">
             <div class="flex justify-between items-start mb-1">
-                 <div id="stock-trend" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 italic">טוען...</div>
+                 <div id="stock-trend" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 italic italic">טוען...</div>
                  <h3 class="text-gray-400 text-[10px] font-bold uppercase">מסלול מדד (S&P 500)</h3>
             </div>
             <p class="text-4xl font-black text-gray-800 amount-text mb-4 text-left">₪<span id="invest-display">--</span></p>
-            
             <div class="flex justify-between items-center text-[10px] text-gray-400 border-t pt-3 border-dashed">
-                <span id="market-status" class="italic italic">מנסה להתעדכן מהבורסה...</span>
+                <span id="market-status" class="italic">מעדכן בורסה...</span>
                 <span>השקעה: ₪<span id="invest-base">0</span></span>
             </div>
         </div>
-
     </main>
 
     <script>
@@ -70,54 +93,67 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         const childRef = database.ref('users/שגיא');
+        let currentData = {};
 
-        async function getMarketPrice() {
+        // משיכת נתונים
+        childRef.on('value', async (snapshot) => {
+            currentData = snapshot.val();
+            if (!currentData) return;
+            document.getElementById('cash-display').innerText = (currentData.Cash || 0).toLocaleString();
+            document.getElementById('savings-display').innerText = (currentData.Savings || 0).toLocaleString();
+            document.getElementById('interest-tag').innerText = (currentData.Interest_ratr || 0) + '% ריבית חודשית';
+            document.getElementById('invest-base').innerText = (currentData.Investments || 0).toLocaleString();
+            updateMarket(currentData.Investments, currentData.Investments_Base);
+        });
+
+        // חישוב בורסה
+        async function updateMarket(amount, base) {
             try {
                 const url = `https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC`;
                 const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
                 const response = await fetch(proxyUrl);
                 const json = await response.json();
-                const data = JSON.parse(json.contents);
-                return data.chart.result[0].meta.regularMarketPrice;
-            } catch (e) { return null; }
+                const marketPrice = JSON.parse(json.contents).chart.result[0].meta.regularMarketPrice;
+                
+                const calculated = Math.round(amount * (marketPrice / (base || 5000)));
+                const diff = (((marketPrice - base) / base) * 100).toFixed(2);
+                document.getElementById('invest-display').innerText = calculated.toLocaleString();
+                document.getElementById('stock-trend').innerText = (diff > 0 ? '+' : '') + diff + '%';
+                document.getElementById('market-status').innerText = "מדד: " + Math.round(marketPrice);
+            } catch (e) { 
+                document.getElementById('invest-display').innerText = amount.toLocaleString();
+                document.getElementById('market-status').innerText = "אין חיבור לבורסה";
+            }
         }
 
-        childRef.on('value', async (snapshot) => {
-            const val = snapshot.val();
-            if (!val) return;
+        // ניהול הורה
+        let pressTimer;
+        function startTimer() { pressTimer = window.setTimeout(openAdmin, 3000); }
+        function clearTimer() { clearTimeout(pressTimer); }
+        
+        function openAdmin() {
+            const pass = prompt("הכנס קוד סודי לניהול:");
+            if (pass === "1234") { document.getElementById('admin-panel').style.display = 'block'; }
+            else { alert("קוד שגוי"); }
+        }
+        function closeAdmin() { document.getElementById('admin-panel').style.display = 'none'; }
 
-            document.getElementById('status-msg').innerText = "מעודכן ל-" + new Date().toLocaleTimeString();
+        function updateData(mode) {
+            const field = document.getElementById('admin-target').value;
+            const amount = parseFloat(document.getElementById('admin-amount').value);
+            if (isNaN(amount)) return alert("הכנס מספר תקין");
 
-            // עדכון מזומן וחיסכון
-            document.getElementById('cash-display').innerText = (val.Cash || 0).toLocaleString();
-            document.getElementById('savings-display').innerText = (val.Savings || 0).toLocaleString();
-            document.getElementById('interest-tag').innerText = (val.Interest_ratr || 0) + '% ריבית חודשית';
-            
-            // השקעות - תצוגה בסיסית
-            const baseInvest = val.Investments || 0;
-            const investBasePrice = val.Investments_Base || 5000;
-            document.getElementById('invest-display').innerText = baseInvest.toLocaleString();
-            document.getElementById('invest-base').innerText = baseInvest.toLocaleString();
-
-            // עדכון בורסה
-            const currentMarket = await getMarketPrice();
-            if (currentMarket) {
-                const ratio = currentMarket / investBasePrice;
-                const calculatedValue = Math.round(baseInvest * ratio);
-                const diff = (((currentMarket - investBasePrice) / investBasePrice) * 100).toFixed(2);
-                
-                document.getElementById('invest-display').innerText = calculatedValue.toLocaleString();
-                const trend = document.getElementById('stock-trend');
-                trend.innerText = (diff > 0 ? '+' : '') + diff + '%';
-                trend.className = diff > 0 ? 
-                    "text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 italic" : 
-                    "text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 italic";
-                
-                document.getElementById('market-status').innerText = "מדד: " + Math.round(currentMarket);
-            } else {
-                document.getElementById('market-status').innerText = "בורסה סגורה / אין חיבור";
+            let newValue = amount;
+            if (mode === 'add') {
+                newValue = (currentData[field] || 0) + amount;
             }
-        });
+
+            childRef.child(field).set(newValue).then(() => {
+                alert("עודכן בהצלחה!");
+                document.getElementById('admin-amount').value = "";
+                closeAdmin();
+            });
+        }
     </script>
 </body>
 </html>
