@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>הבנק המשפחתי</title>
+    <title>הבנק המשפחתי - עדכון מדד</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
@@ -14,31 +14,29 @@
         .amount-text { font-style: italic; letter-spacing: -0.05em; text-align: left; direction: ltr; }
         #admin-panel, #main-content, #history-panel, #loading-screen { display: none; }
         #login-screen { display: flex; }
-        .negative { color: #ef4444 !important; }
         input, select { text-align: center; direction: ltr; }
     </style>
 </head>
 <body class="min-h-screen">
 
-    <div id="loading-screen" class="fixed inset-0 bg-blue-600 z-[3000] flex flex-col items-center justify-center text-white text-center p-6">
+    <div id="loading-screen" class="fixed inset-0 bg-blue-600 z-[3000] flex flex-col items-center justify-center text-white p-6">
         <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-white mb-4"></div>
-        <p class="font-bold italic">מעדכן נתונים מהבורסה...</p>
+        <p class="font-bold italic">מתחבר לבורסה בניו יורק...</p>
     </div>
 
-    <div id="login-screen" class="fixed inset-0 bg-blue-600 z-[2000] flex flex-col items-center justify-center p-6 text-white">
-        <h1 class="text-4xl font-black mb-2 italic text-center w-full">הבנק המשפחתי</h1>
-        <div class="w-full max-w-sm space-y-4 mt-8">
-            <input type="email" id="login-email" placeholder="אימייל" class="w-full p-4 rounded-2xl text-gray-800 font-bold outline-none shadow-lg border-none">
-            <input type="password" id="login-pass" placeholder="סיסמה" class="w-full p-4 rounded-2xl text-gray-800 font-bold outline-none shadow-lg border-none">
-            <button onclick="handleLogin()" id="login-btn" class="w-full bg-orange-400 p-4 rounded-2xl font-black text-xl shadow-xl active:scale-95 italic">כניסה למערכת</button>
-            <p id="login-error" class="text-red-300 text-sm font-bold hidden text-center italic">שגיאה בפרטים</p>
+    <div id="login-screen" class="fixed inset-0 bg-blue-600 z-[2000] flex flex-col items-center justify-center p-6 text-white text-center">
+        <h1 class="text-4xl font-black mb-8 italic">הבנק המשפחתי</h1>
+        <div class="w-full max-w-sm space-y-4">
+            <input type="email" id="login-email" placeholder="אימייל" class="w-full p-4 rounded-2xl text-gray-800 font-bold outline-none border-none">
+            <input type="password" id="login-pass" placeholder="סיסמה" class="w-full p-4 rounded-2xl text-gray-800 font-bold outline-none border-none">
+            <button onclick="handleLogin()" class="w-full bg-orange-400 p-4 rounded-2xl font-black text-xl shadow-xl italic">כניסה</button>
         </div>
     </div>
 
     <div id="main-content">
-        <button onclick="openAdmin()" class="fixed top-4 right-4 z-50 bg-slate-800 text-white text-[10px] px-4 py-2 rounded-full font-bold shadow-xl">⚙️ ניהול</button>
+        <button onclick="openAdmin()" class="fixed top-4 right-4 z-50 bg-slate-800 text-white text-[10px] px-4 py-2 rounded-full font-bold shadow-xl border border-slate-600">⚙️ ניהול</button>
 
-        <div id="history-panel" class="fixed inset-0 bg-white z-[1500] p-6 overflow-y-auto">
+        <div id="history-panel" class="fixed inset-0 bg-white z-[1500] p-6 overflow-y-auto text-right">
             <div class="flex justify-between items-center mb-6 border-b pb-4">
                 <h2 id="history-title" class="text-2xl font-bold text-blue-800 italic">פירוט תנועות</h2>
                 <button onclick="closeHistory()" class="bg-gray-100 px-4 py-2 rounded-xl font-bold">X</button>
@@ -46,67 +44,67 @@
             <div id="history-list"></div>
         </div>
 
-        <div id="admin-panel" class="fixed inset-0 bg-white z-[1000] p-6 overflow-y-auto">
+        <div id="admin-panel" class="fixed inset-0 bg-white z-[1000] p-6 overflow-y-auto text-right">
             <div class="flex justify-between items-center mb-8 border-b pb-4">
-                <h2 class="text-2xl font-bold text-blue-800 italic w-full text-right uppercase">ניהול כספים</h2>
-                <button onclick="closeAdmin()" class="bg-gray-100 px-4 py-2 rounded-xl font-bold italic">סגור</button>
+                <h2 class="text-2xl font-bold text-blue-800 italic w-full text-right">פעולות בחשבון</h2>
+                <button onclick="closeAdmin()" class="bg-gray-100 px-4 py-2 rounded-xl font-bold italic">X</button>
             </div>
-            <div class="space-y-6 text-right">
+            <div class="space-y-6">
                 <div>
-                    <label class="block text-[10px] font-bold text-gray-400 mb-2 uppercase italic">חשבון נוכחי</label>
+                    <label class="block text-xs font-bold text-gray-400 mb-2 uppercase">בחר ילד</label>
                     <select id="child-selector" onchange="switchChild(this.value)" class="w-full p-4 border-2 border-blue-50 rounded-2xl bg-blue-50 font-black text-blue-800 outline-none">
                         <option value="שגיא">שגיא</option>
                         <option value="איתי">איתי</option>
                     </select>
                 </div>
-                <select id="admin-target" class="w-full p-4 border-2 border-gray-100 rounded-2xl bg-white font-bold text-right outline-none">
-                    <option value="cash">💵 מזומן (עו"ש)</option>
-                    <option value="savings">🏦 פיקדון (חיסכון)</option>
-                    <option value="invest">📈 השקעה (S&P 500)</option>
-                    <option value="config_interest">⚙️ עדכון % ריבית חודשית</option>
+                <select id="admin-target" class="w-full p-4 border-2 border-gray-100 rounded-2xl bg-white font-bold outline-none">
+                    <option value="cash">💵 עו"ש</option>
+                    <option value="savings">🏦 פיקדון</option>
+                    <option value="invest">📈 S&P 500</option>
+                    <option value="config_interest">⚙️ % ריבית פיקדון</option>
                 </select>
-                <input type="number" id="admin-amount" inputmode="decimal" class="w-full p-5 border-2 border-blue-100 rounded-2xl text-3xl font-black bg-blue-50 text-center" placeholder="0.00">
+                <input type="number" id="admin-amount" inputmode="decimal" class="w-full p-5 border-2 border-blue-100 rounded-2xl text-3xl font-black bg-blue-50" placeholder="0.00">
                 <div class="grid grid-cols-2 gap-4">
-                    <button onclick="executeAction('plus')" class="bg-green-600 text-white p-6 rounded-2xl font-bold shadow-lg text-xl italic">➕ הפקדה</button>
-                    <button onclick="executeAction('minus')" class="bg-red-600 text-white p-6 rounded-2xl font-bold shadow-lg text-xl italic">➖ משיכה</button>
+                    <button onclick="executeAction('plus')" class="bg-green-600 text-white p-6 rounded-2xl font-bold shadow-lg italic">➕ הפקדה</button>
+                    <button onclick="executeAction('minus')" class="bg-red-600 text-white p-6 rounded-2xl font-bold shadow-lg italic">➖ משיכה</button>
                 </div>
-                <div class="pt-10 text-center">
-                    <button onclick="firebase.auth().signOut()" class="text-blue-600 font-bold underline italic">התנתקות מהחשבון</button>
+                <div class="pt-10 flex flex-col items-center">
+                    <button onclick="firebase.auth().signOut()" class="text-blue-600 font-bold underline italic text-sm">התנתק מהמערכת</button>
                 </div>
             </div>
         </div>
 
-        <header class="bg-blue-600 text-white pt-12 pb-10 px-8 rounded-b-[3rem] shadow-xl mb-8 text-center">
-            <h1 id="main-title" class="text-3xl font-extrabold italic tracking-tight uppercase">הבנק המשפחתי</h1>
+        <header class="bg-blue-600 text-white pt-12 pb-10 px-8 rounded-b-[3rem] shadow-xl mb-8 text-center relative overflow-hidden">
+            <h1 id="main-title" class="text-3xl font-extrabold italic tracking-tight uppercase relative z-10">הבנק המשפחתי</h1>
         </header>
 
         <main class="px-6 space-y-6 max-w-md mx-auto pb-24">
             <div class="bg-white p-6 rounded-3xl shadow-sm border-r-8 border-orange-400">
                 <div class="flex justify-between items-center mb-4">
-                    <button onclick="showHistory('cash')" class="text-[10px] bg-orange-50 text-orange-600 px-3 py-1 rounded-full font-bold italic">פירוט ←</button>
-                    <h3 class="text-gray-400 text-[10px] font-bold uppercase italic tracking-tighter">CASH / עו"ש</h3>
+                    <button onclick="showHistory('cash')" class="text-[10px] bg-orange-50 text-orange-600 px-3 py-1 rounded-full font-bold italic border border-orange-100">פירוט ←</button>
+                    <h3 class="text-gray-400 text-[10px] font-bold uppercase italic">CASH / עו"ש</h3>
                 </div>
                 <p id="cash-display" class="text-4xl font-black text-gray-800 amount-text">₪0</p>
             </div>
 
             <div class="bg-white p-6 rounded-3xl shadow-sm border-r-8 border-green-500">
-                <div class="flex justify-between items-start mb-1 text-right italic">
-                    <button onclick="showHistory('savings')" class="text-[10px] bg-green-50 text-green-700 px-3 py-1 rounded-full font-bold italic">פירוט ←</button>
-                    <h3 class="text-gray-400 text-[10px] font-bold uppercase italic tracking-tighter">SAVINGS / פיקדון</h3>
+                <div class="flex justify-between items-start mb-1 italic">
+                    <button onclick="showHistory('savings')" class="text-[10px] bg-green-50 text-green-700 px-3 py-1 rounded-full font-bold italic border border-green-100">פירוט ←</button>
+                    <h3 class="text-gray-400 text-[10px] font-bold uppercase italic">SAVINGS / פיקדון</h3>
                 </div>
-                <div id="interest-tag" class="text-[10px] text-green-600 font-bold mb-2 italic">--% ריבית</div>
+                <div id="interest-tag" class="text-[10px] text-green-600 font-bold mb-2 italic">0.5% ריבית</div>
                 <p id="savings-display" class="text-4xl font-black text-gray-800 amount-text">₪0</p>
             </div>
 
             <div class="bg-white p-6 rounded-3xl shadow-sm border-r-8 border-indigo-600">
                 <div class="flex justify-between items-center mb-2">
-                     <button onclick="showHistory('invest')" class="text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full font-bold italic">פירוט ←</button>
-                     <h3 class="text-gray-400 text-[10px] font-bold uppercase italic tracking-tighter">S&P 500 INDEX</h3>
+                     <button onclick="showHistory('invest')" class="text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full font-bold italic border border-indigo-100">פירוט ←</button>
+                     <h3 class="text-gray-400 text-[10px] font-bold uppercase italic">S&P 500</h3>
                 </div>
                 <p id="invest-display" class="text-4xl font-black text-gray-800 amount-text mb-4">₪0</p>
-                <div class="flex justify-between text-[10px] text-gray-400 border-t pt-3 border-dashed italic">
-                    <span id="market-status" class="font-bold">טוען מדד...</span>
-                    <span>קרן: <span class="font-bold">₪</span><span id="invest-base" class="font-bold">0</span></span>
+                <div class="flex justify-between text-[10px] text-gray-400 border-t pt-3 border-dashed italic font-bold">
+                    <span id="market-status">מעדכן שער...</span>
+                    <span>תשואה: <span id="stock-yield">0%</span></span>
                 </div>
             </div>
         </main>
@@ -129,7 +127,7 @@
         let currentChild = localStorage.getItem('lastChild') || 'שגיא';
         let dbRef = dbRoot.child(currentChild);
         let globalData = null;
-        let marketPrice = 5900; // שער גיבוי ראשוני
+        let marketPrice = 0; 
 
         auth.onAuthStateChanged(user => {
             if (user) {
@@ -139,33 +137,36 @@
             } else {
                 document.getElementById('login-screen').style.display = 'flex';
                 document.getElementById('main-content').style.display = 'none';
-                document.getElementById('loading-screen').style.display = 'none';
             }
         });
 
         function handleLogin() {
             const email = document.getElementById('login-email').value;
             const pass = document.getElementById('login-pass').value;
-            auth.signInWithEmailAndPassword(email, pass).catch(() => {
-                document.getElementById('login-error').classList.remove('hidden');
-            });
+            auth.signInWithEmailAndPassword(email, pass).catch(() => alert("פרטים שגויים"));
         }
 
         async function fetchMarket() {
-            try {
-                // שימוש במנוע עקיפה אחר ל-CORS
-                const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC')}`);
-                const data = await res.json();
-                const price = data.chart.result[0].meta.regularMarketPrice;
-                if (price > 0) {
-                    marketPrice = price;
-                    document.getElementById('market-status').innerText = "S&P 500: " + Math.round(marketPrice);
-                    return true;
-                }
-            } catch(e) {
-                console.log("Market fetch error, using backup price");
-                document.getElementById('market-status').innerText = "S&P 500: " + marketPrice + " (Delayed)";
+            const proxies = [
+                `https://api.allorigins.win/raw?url=`,
+                `https://corsproxy.io/?`
+            ];
+            const target = encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC');
+            
+            for (let proxy of proxies) {
+                try {
+                    const res = await fetch(proxy + target);
+                    const data = await res.json();
+                    const price = data.chart.result[0].meta.regularMarketPrice;
+                    if (price > 0) {
+                        marketPrice = price;
+                        document.getElementById('market-status').innerText = "שער נוכחי: " + Math.round(marketPrice);
+                        return true;
+                    }
+                } catch(e) { console.warn("Proxy failed, trying next..."); }
             }
+            // אם הכל נכשל, נציג הודעה
+            document.getElementById('market-status').innerText = "שער לא זמין";
             return false;
         }
 
@@ -182,10 +183,12 @@
                 const interest = globalData.config_interest !== undefined ? (globalData.config_interest / 100) : 0.005;
                 document.getElementById('interest-tag').innerText = (interest * 100).toFixed(1) + '% ריבית חודשית';
 
+                // עו"ש
                 let cashTotal = 0;
                 if (globalData.cash_log) Object.values(globalData.cash_log).forEach(t => cashTotal += t.amount);
                 document.getElementById('cash-display').innerText = '₪' + cashTotal.toLocaleString();
 
+                // פיקדון
                 let savingsTotal = 0;
                 const now = new Date().getTime();
                 if (globalData.savings_log) {
@@ -197,6 +200,7 @@
                 }
                 document.getElementById('savings-display').innerText = '₪' + Math.round(savingsTotal).toLocaleString();
 
+                // S&P 500
                 let totalUnits = 0, totalInvested = 0;
                 if (globalData.invest_log) {
                     Object.values(globalData.invest_log).forEach(t => {
@@ -204,8 +208,14 @@
                         totalInvested += t.amount;
                     });
                 }
-                document.getElementById('invest-display').innerText = '₪' + Math.round(totalUnits * marketPrice).toLocaleString();
-                document.getElementById('invest-base').innerText = totalInvested.toLocaleString();
+                
+                const currentVal = Math.round(totalUnits * marketPrice);
+                const yieldPct = totalInvested > 0 ? (((currentVal - totalInvested) / totalInvested) * 100).toFixed(1) : 0;
+                
+                document.getElementById('invest-display').innerText = '₪' + currentVal.toLocaleString();
+                const yieldEl = document.getElementById('stock-yield');
+                yieldEl.innerText = (yieldPct >= 0 ? '+' : '') + yieldPct + '%';
+                yieldEl.className = yieldPct >= 0 ? "text-green-600" : "text-red-500";
             });
         }
 
@@ -225,7 +235,7 @@
             list.innerHTML = "";
             document.getElementById('history-panel').style.display = 'block';
             if (!globalData || !globalData[type + '_log']) {
-                list.innerHTML = "<p class='text-center py-10 text-gray-400 italic'>אין תנועות</p>";
+                list.innerHTML = "<p class='text-center py-10 text-gray-400 italic'>אין תנועות עדיין</p>";
                 return;
             }
             Object.values(globalData[type + '_log']).sort((a,b) => b.date - a.date).forEach(t => {
@@ -252,6 +262,10 @@
                 dbRef.child('config_interest').set(val);
             } else if (target === 'invest') {
                 if (type === 'minus') val = -Math.abs(val);
+                // אם השער לא נטען, ננסה שוב רגע לפני הקנייה
+                if (marketPrice === 0) await fetchMarket();
+                if (marketPrice === 0) return alert("לא ניתן לבצע פעולה - אין חיבור לבורסה");
+                
                 const units = val / marketPrice;
                 dbRef.child('invest_log').push({ amount: val, units, date: now });
             } else {
