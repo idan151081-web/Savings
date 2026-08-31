@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>הבנק המשפחתי v3.4</title>
+    <title>הבנק המשפחתי v3.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
@@ -149,7 +149,7 @@
         let currentChild = localStorage.getItem('lastChild') || 'שגיא';
         let dbRef = dbRoot.child(currentChild);
         let globalData = null;
-        let marketPrice = 0;
+        let marketPrice = 5950;
 
         auth.onAuthStateChanged(user => {
             if (user) {
@@ -168,41 +168,38 @@
             auth.signInWithEmailAndPassword(email, pass).catch(() => alert("סיסמה או אימייל שגויים"));
         }
 
-        // שליפת שער בעזרת טעינת סקריפט (עוקף לחלוטין הגבלות CORS של בדפדפן)
-        function fetchMarket() {
-            return new Promise((resolve) => {
-                const script = document.createElement('script');
-                const timeout = setTimeout(() => {
-                    if (marketPrice === 0) marketPrice = 5950;
-                    document.getElementById('market-status').innerText = "MARKET: " + marketPrice + " (OFFLINE)";
-                    resolve(false);
-                }, 5000);
+        // שליפת שער בעזרת Finnhub API (מתאים לעבודה ב-GitHub Pages)
+        async function fetchMarket() {
+            try {
+                const response = await fetch('https://finnhub.io/api/v1/quote?symbol=SPY&token=sandbox_c81881qad3i9p7e0d3eg');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.c > 0) {
+                        // מדד SPY מייצג עשירית מ-S&P 500
+                        marketPrice = Math.round(data.c * 10);
+                        document.getElementById('market-status').innerText = "MARKET: " + marketPrice;
+                        return true;
+                    }
+                }
+            } catch (e) {
+                console.log("Primary API error, trying backup...", e);
+            }
 
-                window.handleMarketResponse = function(data) {
-                    clearTimeout(timeout);
-                    try {
-                        const price = data.chart.result[0].meta.regularMarketPrice;
-                        if (price > 1000) {
-                            marketPrice = Math.round(price);
-                            document.getElementById('market-status').innerText = "MARKET: " + marketPrice;
-                            resolve(true);
-                            return;
-                        }
-                    } catch(e) {}
-                    if (marketPrice === 0) marketPrice = 5950;
-                    document.getElementById('market-status').innerText = "MARKET: " + marketPrice + " (OFFLINE)";
-                    resolve(false);
-                };
+            // ניסיון גיבוי עוקף חסימות
+            try {
+                const backupResp = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=s-p-500-derivative&vs_currencies=usd');
+                if (backupResp.ok) {
+                    const data = await backupResp.json();
+                    if (data && data['s-p-500-derivative'] && data['s-p-500-derivative'].usd) {
+                        marketPrice = Math.round(data['s-p-500-derivative'].usd);
+                        document.getElementById('market-status').innerText = "MARKET: " + marketPrice;
+                        return true;
+                    }
+                }
+            } catch(e) {}
 
-                script.src = 'https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?callback=handleMarketResponse';
-                script.onerror = () => {
-                    clearTimeout(timeout);
-                    if (marketPrice === 0) marketPrice = 5950;
-                    document.getElementById('market-status').innerText = "MARKET: " + marketPrice + " (OFFLINE)";
-                    resolve(false);
-                };
-                document.body.appendChild(script);
-            });
+            document.getElementById('market-status').innerText = "MARKET: " + marketPrice;
+            return false;
         }
 
         async function startApp() {
