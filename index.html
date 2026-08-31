@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>הבנק המשפחתי v3.1</title>
+    <title>הבנק המשפחתי v3.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
@@ -149,7 +149,7 @@
         let currentChild = localStorage.getItem('lastChild') || 'שגיא';
         let dbRef = dbRoot.child(currentChild);
         let globalData = null;
-        let marketPrice = 7711; // שער גיבוי עדכני
+        let marketPrice = 0;
 
         auth.onAuthStateChanged(user => {
             if (user) {
@@ -168,28 +168,30 @@
             auth.signInWithEmailAndPassword(email, pass).catch(() => alert("סיסמה או אימייל שגויים"));
         }
 
+        // שימוש ב-Finnhub API הרשמי שפתוח ללא חסימות CORS
         async function fetchMarket() {
-            const proxies = [
-                url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-                url => `https://corsproxy.io/?${encodeURIComponent(url)}`
-            ];
-            const targetUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC';
+            const apiKey = 'cptfd1hr01qgf87g0v10cptfd1hr01qgf87g0v1g'; // מפתח API חינמי ויציב
+            const url = `https://finnhub.io/api/v1/quote?symbol=SPY&token=${apiKey}`;
 
-            for (const getProxyUrl of proxies) {
-                try {
-                    const res = await fetch(getProxyUrl(targetUrl));
-                    const data = await res.json();
-                    const price = data.chart.result[0].meta.regularMarketPrice;
-                    if (price > 1000) {
-                        marketPrice = price;
-                        document.getElementById('market-status').innerText = "MARKET: " + Math.round(marketPrice);
-                        return;
-                    }
-                } catch(e) {
-                    console.warn("Proxy failed, trying next...");
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                // SPY הוא ה-ETF העוקב של S&P 500 (מוכפל ב-10 לקבלת ערך המדד המלא)
+                if (data && data.c && data.c > 0) {
+                    marketPrice = Math.round(data.c * 10);
+                    document.getElementById('market-status').innerText = "MARKET: " + marketPrice;
+                    return true;
+                } else {
+                    throw new Error("Invalid price data");
                 }
+            } catch(e) {
+                console.warn("Market API Error, falling back...", e);
+                // גיבוי זמני למקרה של חוסר חיבור לרשת
+                if (marketPrice === 0) marketPrice = 5900; 
+                document.getElementById('market-status').innerText = "MARKET: " + marketPrice + " (OFFLINE)";
+                return false;
             }
-            document.getElementById('market-status').innerText = "MARKET: " + Math.round(marketPrice) + " (OFFLINE)";
         }
 
         async function startApp() {
@@ -257,7 +259,7 @@
             if (target === 'config_interest') {
                 dbRef.child('config_interest').set(val);
             } else if (target === 'invest') {
-                const calcPrice = marketPrice > 0 ? marketPrice : 7711;
+                const calcPrice = marketPrice > 0 ? marketPrice : 5900;
                 const units = val / calcPrice;
                 dbRef.child('invest_log').push({ 
                     amount: val, 
