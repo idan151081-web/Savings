@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>הבנק המשפחתי v3.0</title>
+    <title>הבנק המשפחתי v3.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
@@ -19,11 +19,13 @@
 </head>
 <body class="min-h-screen text-right">
 
+    <!-- מסך טעינה -->
     <div id="loading-screen" class="fixed inset-0 bg-blue-600 z-[3000] flex flex-col items-center justify-center text-white">
         <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-white mb-4"></div>
         <p class="font-bold italic text-lg">מעדכן נתונים מהבורסה...</p>
     </div>
 
+    <!-- מסך כניסה -->
     <div id="login-screen" class="fixed inset-0 bg-blue-600 z-[2000] flex flex-col items-center justify-center p-6 text-white text-center">
         <h1 class="text-4xl font-black mb-8 italic uppercase">הבנק המשפחתי</h1>
         <div class="w-full max-w-sm space-y-4">
@@ -36,6 +38,7 @@
     <div id="main-content">
         <button onclick="openAdmin()" class="fixed top-4 right-4 z-50 bg-slate-800 text-white text-[10px] px-4 py-2 rounded-full font-bold shadow-xl border border-slate-600 uppercase">⚙️ ADMIN</button>
 
+        <!-- מסך היסטוריה -->
         <div id="history-panel" class="fixed inset-0 bg-white z-[1500] p-6 overflow-y-auto text-right">
             <div class="flex justify-between items-center mb-6 border-b pb-4">
                 <h2 id="history-title" class="text-2xl font-bold text-blue-800 italic uppercase">פירוט תנועות</h2>
@@ -44,6 +47,7 @@
             <div id="history-list" class="space-y-4"></div>
         </div>
 
+        <!-- מסך ניהול -->
         <div id="admin-panel" class="fixed inset-0 bg-white z-[1000] p-6 overflow-y-auto text-right">
             <div class="flex justify-between items-center mb-8 border-b pb-4">
                 <h2 class="text-2xl font-bold text-blue-800 italic uppercase w-full">ניהול חשבון</h2>
@@ -81,6 +85,7 @@
         </header>
 
         <main class="px-6 space-y-6 max-w-md mx-auto pb-24 text-right">
+            <!-- כרטיס עו"ש -->
             <div class="bg-white p-6 rounded-3xl shadow-sm border-r-8 border-orange-400">
                 <div class="flex justify-between items-center mb-4">
                     <button onclick="showHistory('cash')" class="text-[10px] bg-orange-50 text-orange-600 px-3 py-1 rounded-full font-bold italic border border-orange-100">היסטוריה ←</button>
@@ -89,6 +94,7 @@
                 <p id="cash-display" class="text-4xl font-black text-gray-800 amount-text">₪0</p>
             </div>
 
+            <!-- כרטיס פיקדון -->
             <div class="bg-white p-6 rounded-3xl shadow-sm border-r-8 border-green-500">
                 <div class="flex justify-between items-start mb-1 italic">
                     <button onclick="showHistory('savings')" class="text-[10px] bg-green-50 text-green-700 px-3 py-1 rounded-full font-bold italic border border-green-100">היסטוריה ←</button>
@@ -98,6 +104,7 @@
                 <p id="savings-display" class="text-4xl font-black text-gray-800 amount-text">₪0.00</p>
             </div>
 
+            <!-- כרטיס S&P -->
             <div class="bg-white p-6 rounded-3xl shadow-sm border-r-8 border-indigo-600 relative overflow-hidden">
                 <div class="flex justify-between items-center mb-2">
                      <button onclick="showHistory('invest')" class="text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full font-bold italic border border-indigo-100 uppercase">HISTORY ←</button>
@@ -142,7 +149,7 @@
         let currentChild = localStorage.getItem('lastChild') || 'שגיא';
         let dbRef = dbRoot.child(currentChild);
         let globalData = null;
-        let marketPrice = 6582; // שער גיבוי
+        let marketPrice = 7711; // שער גיבוי עדכני
 
         auth.onAuthStateChanged(user => {
             if (user) {
@@ -161,21 +168,28 @@
             auth.signInWithEmailAndPassword(email, pass).catch(() => alert("סיסמה או אימייל שגויים"));
         }
 
-        // שימוש ב-API יציב יותר עם מנגנון הגנה
         async function fetchMarket() {
-            try {
-                // נסיון משיכה מ-AllOrigins (עוקף CORS)
-                const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC')}`);
-                const data = await res.json();
-                const price = data.chart.result[0].meta.regularMarketPrice;
-                if (price > 1000) {
-                    marketPrice = price;
-                    document.getElementById('market-status').innerText = "MARKET: " + Math.round(marketPrice);
+            const proxies = [
+                url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                url => `https://corsproxy.io/?${encodeURIComponent(url)}`
+            ];
+            const targetUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC';
+
+            for (const getProxyUrl of proxies) {
+                try {
+                    const res = await fetch(getProxyUrl(targetUrl));
+                    const data = await res.json();
+                    const price = data.chart.result[0].meta.regularMarketPrice;
+                    if (price > 1000) {
+                        marketPrice = price;
+                        document.getElementById('market-status').innerText = "MARKET: " + Math.round(marketPrice);
+                        return;
+                    }
+                } catch(e) {
+                    console.warn("Proxy failed, trying next...");
                 }
-            } catch(e) { 
-                console.warn("Market Update Failed - Using Backup Price");
-                document.getElementById('market-status').innerText = "MARKET: " + marketPrice + " (OFFLINE)";
             }
+            document.getElementById('market-status').innerText = "MARKET: " + Math.round(marketPrice) + " (OFFLINE)";
         }
 
         async function startApp() {
@@ -196,7 +210,7 @@
                 if (globalData.cash_log) Object.values(globalData.cash_log).forEach(t => cashTotal += t.amount);
                 document.getElementById('cash-display').innerText = '₪' + Math.round(cashTotal).toLocaleString();
 
-                // פיקדון (דיוק באגורות)
+                // פיקדון
                 let savingsTotal = 0;
                 const now = new Date().getTime();
                 if (globalData.savings_log) {
@@ -243,8 +257,7 @@
             if (target === 'config_interest') {
                 dbRef.child('config_interest').set(val);
             } else if (target === 'invest') {
-                // חישוב יחידות לפי שער נוכחי (למנוע חלוקה ב-0)
-                const calcPrice = marketPrice > 0 ? marketPrice : 6582;
+                const calcPrice = marketPrice > 0 ? marketPrice : 7711;
                 const units = val / calcPrice;
                 dbRef.child('invest_log').push({ 
                     amount: val, 
@@ -275,7 +288,6 @@
                 row.className = "p-4 bg-gray-50 rounded-2xl border border-gray-100 italic relative overflow-hidden";
                 const color = t.amount < 0 ? 'text-red-500' : 'text-green-600';
                 
-                // הוספת שער קנייה לפירוט אם קיים (עבור השקעות)
                 const priceInfo = t.price_at_buy ? 
                     `<div class="text-[9px] text-indigo-400 mt-1 uppercase font-black">BUY PRICE: ${Math.round(t.price_at_buy)} | UNITS: ${(t.units).toFixed(4)}</div>` : '';
 
@@ -306,7 +318,6 @@
         function openAdmin() { if(prompt("סיסמה:") === "1234") document.getElementById('admin-panel').style.display='block'; }
         function closeAdmin() { document.getElementById('admin-panel').style.display='none'; }
         
-        // רענון אוטומטי כשחוזרים לאפליקציה (מונע קפיאה של השער)
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") fetchMarket();
         });
