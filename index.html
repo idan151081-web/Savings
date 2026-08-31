@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>הבנק המשפחתי v3.2</title>
+    <title>הבנק המשפחתי v3.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
@@ -168,27 +168,24 @@
             auth.signInWithEmailAndPassword(email, pass).catch(() => alert("סיסמה או אימייל שגויים"));
         }
 
-        // שימוש ב-Finnhub API הרשמי שפתוח ללא חסימות CORS
+        // שליפת שער חי מ-Stooq API ללא דרישת מפתח
         async function fetchMarket() {
-            const apiKey = 'cptfd1hr01qgf87g0v10cptfd1hr01qgf87g0v1g'; // מפתח API חינמי ויציב
-            const url = `https://finnhub.io/api/v1/quote?symbol=SPY&token=${apiKey}`;
+            const url = 'https://stooq.com/q/l/?s=^spx&f=sdocl1&e=json';
 
             try {
                 const res = await fetch(url);
                 const data = await res.json();
                 
-                // SPY הוא ה-ETF העוקב של S&P 500 (מוכפל ב-10 לקבלת ערך המדד המלא)
-                if (data && data.c && data.c > 0) {
-                    marketPrice = Math.round(data.c * 10);
+                if (data && data.symbols && data.symbols[0] && data.symbols[0].close) {
+                    marketPrice = Math.round(parseFloat(data.symbols[0].close));
                     document.getElementById('market-status').innerText = "MARKET: " + marketPrice;
                     return true;
                 } else {
-                    throw new Error("Invalid price data");
+                    throw new Error("Invalid format");
                 }
             } catch(e) {
-                console.warn("Market API Error, falling back...", e);
-                // גיבוי זמני למקרה של חוסר חיבור לרשת
-                if (marketPrice === 0) marketPrice = 5900; 
+                console.warn("Market fetch failed, using fallback...", e);
+                if (marketPrice === 0) marketPrice = 5950; 
                 document.getElementById('market-status').innerText = "MARKET: " + marketPrice + " (OFFLINE)";
                 return false;
             }
@@ -259,7 +256,7 @@
             if (target === 'config_interest') {
                 dbRef.child('config_interest').set(val);
             } else if (target === 'invest') {
-                const calcPrice = marketPrice > 0 ? marketPrice : 5900;
+                const calcPrice = marketPrice > 0 ? marketPrice : 5950;
                 const units = val / calcPrice;
                 dbRef.child('invest_log').push({ 
                     amount: val, 
