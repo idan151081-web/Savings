@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>הבנק המשפחתי v3.7</title>
+    <title>הבנק המשפחתי v3.8</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
@@ -172,7 +172,6 @@
         }
 
         async function fetchMarket() {
-            // ניסיון שליפה מ-API
             try {
                 const proxy = 'https://api.allorigins.win/get?url=';
                 const target = encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/^GSPC');
@@ -189,11 +188,58 @@
                 }
             } catch (e) {}
 
-            // אם API נכשל, נשלוף את השער השמור מ-Firebase
             const snapshot = await dbGlobal.child('sp_price').once('value');
-            if (snapshot.exists()) {
+            if (snapshot.exists() && snapshot.val()) {
                 marketPrice = snapshot.val();
+                isLiveAPI = false;
             }
+        }
+
+        function updateUI() {
+            if (!globalData) return;
+
+            document.getElementById('market-status').innerText = "MARKET: " + marketPrice + (isLiveAPI ? " (LIVE)" : "");
+
+            const interest = globalData.config_interest !== undefined ? (globalData.config_interest / 100) : 0.005;
+            document.getElementById('interest-tag').innerText = (interest * 100).toFixed(1) + '% MONTHLY INTEREST';
+
+            // עו"ש
+            let cashTotal = 0;
+            if (globalData.cash_log) Object.values(globalData.cash_log).forEach(t => cashTotal += t.amount);
+            document.getElementById('cash-display').innerText = '₪' + Math.round(cashTotal).toLocaleString();
+
+            // פיקדון
+            let savingsTotal = 0;
+            const now = new Date().getTime();
+            if (globalData.savings_log) {
+                Object.values(globalData.savings_log).forEach(t => {
+                    const daysPast = (now - t.date) / (1000 * 60 * 60 * 24);
+                    const dailyRate = Math.pow(1 + interest, 1/30);
+                    savingsTotal += t.amount * Math.pow(dailyRate, daysPast);
+                });
+            }
+            document.getElementById('savings-display').innerText = '₪' + savingsTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+            // S&P 500
+            let totalUnits = 0, totalInvested = 0, lastPrice = 0;
+            if (globalData.invest_log) {
+                const logs = Object.values(globalData.invest_log).sort((a,b) => a.date - b.date);
+                logs.forEach(t => {
+                    totalUnits += (t.units || 0);
+                    totalInvested += (t.amount || 0);
+                    if (t.price_at_buy) lastPrice = t.price_at_buy; 
+                });
+            }
+            
+            const currentVal = Math.round(totalUnits * marketPrice);
+            const yieldPct = totalInvested > 0 ? (((currentVal - totalInvested) / Math.abs(totalInvested)) * 100).toFixed(1) : 0;
+            
+            document.getElementById('invest-display').innerText = '₪' + currentVal.toLocaleString();
+            document.getElementById('invest-base').innerText = Math.round(totalInvested).toLocaleString();
+            document.getElementById('last-buy-price').innerText = lastPrice ? Math.round(lastPrice).toLocaleString() : "---";
+            const yieldEl = document.getElementById('stock-yield');
+            yieldEl.innerText = (yieldPct >= 0 ? '+' : '') + yieldPct + '%';
+            yieldEl.className = yieldPct >= 0 ? "text-green-600" : "text-red-500";
         }
 
         async function startApp() {
@@ -201,53 +247,21 @@
             document.getElementById('main-title').innerText = "הבנק של " + currentChild;
             document.getElementById('child-selector').value = currentChild;
 
-            document.getElementById('market-status').innerText = "MARKET: " + marketPrice + (isLiveAPI ? " (LIVE)" : "");
+            // האזנה בזמן אמת לשינוי שער מנהל מ-Firebase
+            dbGlobal.child('sp_price').on('value', (s) => {
+                if (s.exists() && s.val()) {
+                    marketPrice = s.val();
+                    isLiveAPI = false;
+                    updateUI();
+                }
+            });
 
+            // האזנה בזמן אמת לתנועות של הילד
             dbRef.on('value', (s) => {
                 globalData = s.val() || {};
                 document.getElementById('loading-screen').style.display = 'none';
                 document.getElementById('main-content').style.display = 'block';
-
-                const interest = globalData.config_interest !== undefined ? (globalData.config_interest / 100) : 0.005;
-                document.getElementById('interest-tag').innerText = (interest * 100).toFixed(1) + '% MONTHLY INTEREST';
-
-                // עו"ש
-                let cashTotal = 0;
-                if (globalData.cash_log) Object.values(globalData.cash_log).forEach(t => cashTotal += t.amount);
-                document.getElementById('cash-display').innerText = '₪' + Math.round(cashTotal).toLocaleString();
-
-                // פיקדון
-                let savingsTotal = 0;
-                const now = new Date().getTime();
-                if (globalData.savings_log) {
-                    Object.values(globalData.savings_log).forEach(t => {
-                        const daysPast = (now - t.date) / (1000 * 60 * 60 * 24);
-                        const dailyRate = Math.pow(1 + interest, 1/30);
-                        savingsTotal += t.amount * Math.pow(dailyRate, daysPast);
-                    });
-                }
-                document.getElementById('savings-display').innerText = '₪' + savingsTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-
-                // S&P 500
-                let totalUnits = 0, totalInvested = 0, lastPrice = 0;
-                if (globalData.invest_log) {
-                    const logs = Object.values(globalData.invest_log).sort((a,b) => a.date - b.date);
-                    logs.forEach(t => {
-                        totalUnits += (t.units || 0);
-                        totalInvested += (t.amount || 0);
-                        if (t.price_at_buy) lastPrice = t.price_at_buy; 
-                    });
-                }
-                
-                const currentVal = Math.round(totalUnits * marketPrice);
-                const yieldPct = totalInvested > 0 ? (((currentVal - totalInvested) / Math.abs(totalInvested)) * 100).toFixed(1) : 0;
-                
-                document.getElementById('invest-display').innerText = '₪' + currentVal.toLocaleString();
-                document.getElementById('invest-base').innerText = Math.round(totalInvested).toLocaleString();
-                document.getElementById('last-buy-price').innerText = lastPrice ? Math.round(lastPrice).toLocaleString() : "---";
-                const yieldEl = document.getElementById('stock-yield');
-                yieldEl.innerText = (yieldPct >= 0 ? '+' : '') + yieldPct + '%';
-                yieldEl.className = yieldPct >= 0 ? "text-green-600" : "text-red-500";
+                updateUI();
             });
         }
 
@@ -265,9 +279,10 @@
             if (target === 'config_interest') {
                 dbRef.child('config_interest').set(val);
             } else if (target === 'config_sp_price') {
-                dbGlobal.child('sp_price').set(val);
                 marketPrice = val;
-                document.getElementById('market-status').innerText = "MARKET: " + marketPrice;
+                isLiveAPI = false;
+                dbGlobal.child('sp_price').set(val);
+                updateUI();
             } else if (target === 'invest') {
                 const calcPrice = marketPrice > 0 ? marketPrice : 6000;
                 const units = val / calcPrice;
